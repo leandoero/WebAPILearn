@@ -2,10 +2,16 @@ using System.Reflection.Metadata.Ecma335;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;      //Это пространство имен потребуется, когда вы будете вызывать SwaggerDoc() и предоставлять сведения о заголовке для API.
 using Products;
+using myDbName;
+using Microsoft.AspNetCore.Http.HttpResults;
+
 
 var builder = WebApplication.CreateBuilder(args);       //The web application class used to configure the HTTP pipeline, and routes.
 /*Create Builder it is Initializes a new instance of the WebApplicationBuilder class with preconfigured defaults.
 через билдер мы можем подключить например энтити фреймворк или сваггер потому что у него есть builder.Services*/
+var connectionString = builder.Configuration.GetConnectionString("Persons") ?? "Data Source=Persons.db";     
+//https://learn.microsoft.com/en-us/training/modules/build-web-api-minimal-database/5-exercise-use-sqlite-database
+
 
 builder.Services.AddEndpointsApiExplorer();
 /*Метод AddEndpointsApiExplorer() используется в ASP.NET Core для подключения генератора документации API (например, Swagger)
@@ -19,6 +25,14 @@ builder.Services.AddEndpointsApiExplorer();
 как вы начинаете настраивать маршруты через app.MapGet() и другие методы.
 После того, как вы вызываете builder.Build(), коллекция сервисов становится доступной для использования, и ее больше нельзя изменять.
  */
+
+builder.Services.AddSqlite<myDb>(connectionString);
+/*
+ *Информация когда использовал  in memory database
+ *
+//была проблема с UserInMemory -> подгрузил InMemory с nuGet
+//содержимое базы данных хранится во временной памяти а не на диске => данные исчезают после завершения выполнения программы
+*/
 builder.Services.AddSwaggerGen(options =>         //добавить свагер     //options — это экземпляр класса SwaggerUIOptions.
                                                   //Этот объект содержит свойства и методы, которые позволяют детально настроить Swagger UI.
 {
@@ -57,7 +71,16 @@ DELETE	Удаляет ресурс
  */
 
 Persons persons = new Persons();
-app.MapGet("/person", persons.GetPersons);
+app.MapGet("/persons/bd", async (myDb db) => await db.Persons.ToListAsync());
+app.MapPost("/add/bd", async (myDb db, Person person) =>
+{
+    await db.Persons.AddAsync(person);
+    await db.SaveChangesAsync();
+    return Results.Created($"/person/{person.Id}", person);  //Это метод, возвращающий HTTP-ответ с кодом 201 Created.
+                                                            //Он используется для подтверждения успешного создания нового ресурса.
+});
+
+app.MapGet("/persons", persons.GetPersons);
 app.MapGet("/person/{id}", persons.GetPerson);
 app.MapPost("/add", persons.CreatePerson);
 app.MapPut("/update/{id}", persons.UpdatePerson);
