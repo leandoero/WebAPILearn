@@ -1,6 +1,7 @@
 using System.Reflection.Metadata.Ecma335;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;      //Это пространство имен потребуется, когда вы будете вызывать SwaggerDoc() и предоставлять сведения о заголовке для API.
+using Products;
 
 var builder = WebApplication.CreateBuilder(args);       //The web application class used to configure the HTTP pipeline, and routes.
 /*Create Builder it is Initializes a new instance of the WebApplicationBuilder class with preconfigured defaults.
@@ -54,32 +55,12 @@ POST	Отправляет данные для создания ресурса
 PUT	    Отправляет данные для обновления ресурса
 DELETE	Удаляет ресурс
  */
-List<Products> products = new List<Products>()          //https://metanit.com/sharp/tutorial/4.5.php
-{
-    new Products{Id = 0, Name = "first", Description = "desk" },
-    new Products{ Id = 1, Name = "second", Description = "desk"}
-};
 
-app.MapGet("/products", () => products);
-app.MapGet("/products/{id}", (int ID) =>
-{
-    var product = products.FirstOrDefault(p => p.Id == ID);
-
-    if (product == null)
-    {
-        throw new Exception("not found");       //кинет исключение
-    }
-    else return product;   //Results.Ok(product) вернёт продукт с кодом 200 (успех),
-                           //если продукт найден.
-});
-
+Persons persons = new Persons();
+app.MapGet("/person", persons.GetPersons);
+app.MapGet("/person/{id}", persons.GetPerson);
+app.MapPost("/add", persons.CreatePerson);
+app.MapPut("/update/{id}", persons.UpdatePerson);
+app.MapDelete("/delete/{id}", persons.DeletePerson);
 
 app.Run();  // запускает API и прослушивает запросы от клиента.
-
-public class Products
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-
-}
